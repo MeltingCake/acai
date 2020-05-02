@@ -29,73 +29,7 @@ class Quickdraw(DatasetBase):
         """
         Selects files from archive.
         :param files:
-        :return: y_strokes(ground_truth), y_strokes(teacher), x_image, class_name
+        :return: x_image, class_name
         """
         files = sorted(files)
-        return files[2], files[2], files[1], files[0]
-
-    def prepare(self, FLAGS, max_seq_len=65, shard_size=1000, png_dims=(28, 28)):
-        save_dir = os.path.join(self._dataset_path, "caches", self._split)
-        raw_dir = os.path.join(self._dataset_path, "raw")
-
-        os.makedirs(save_dir, exist_ok=True)
-
-        files = [os.path.join(raw_dir, file_path+".npz") for file_path in "panda,hexagon,telephone,mug,stove,laptop,paper clip,crab,birthday cake,squiggle,scorpion,cooler,whale,spider,spreadsheet,parrot,toaster,airplane,beard,envelope,bandage,snorkel,canoe,sword,ocean,hammer,flying saucer,pizza,squirrel,kangaroo,basketball,brain,eraser,violin,golf club,screwdriver,potato,sock,floor lamp,swan,sea turtle,moon,stethoscope,lion,pillow".split(",")]
-        logging.info('Loading NPZ Files | Num Classes: $d', len(files))
-        all_sketches = np.empty((0, 2))
-        for file in files:
-            try:
-                npz = np.load(file, encoding='latin1', allow_pickle=True)
-            except IOError:
-                logging.error("Numpy unable to load dataset file: {}".format(file))
-                continue
-
-            class_name = np.array([file.split('/')[-1].split('.')[0]])
-
-            sketches = np.reshape(npz['train'], (-1, 1))
-
-            classes = np.tile(np.reshape(class_name, (1, -1)), sketches.shape)
-
-            data = np.concatenate((sketches, classes), axis=1)
-
-            if max_seq_len:
-                bool_array = np.array([sketch.shape[0] <= max_seq_len for sketch in data[:, 0]])
-                data = data[bool_array]
-
-            all_sketches = np.concatenate((all_sketches, data))
-            logging.info("Loaded npz: %s | Taking samples %d/%d | Total samples: %d",
-                         file,  data.shape[0], sketches.shape[0], all_sketches.shape[0])
-
-        if not max_seq_len:
-            max_seq_len = max([len(x) for x in all_sketches[:, 0]])
-
-        np.random.shuffle(all_sketches)
-        logging.info("Beginning Processing | %s sketches | %s classes | Max Sequence Length: %s",
-                     all_sketches.shape[0], len(files), max_seq_len)
-
-        cpu_count = psutil.cpu_count(logical=False)
-        workers_per_cpu = 2
-        with ProcessPoolExecutor(max_workers=cpu_count * workers_per_cpu) as executor:
-            out = executor.map(quickdraw_process,
-                               (all_sketches[i: i + shard_size] for i in range(0, all_sketches.shape[0], shard_size)),
-                               repeat(max_seq_len),
-                               repeat(png_dims),
-                               (os.path.join(save_dir, "{}.npz".format(i)) for i in range(ceil(all_sketches.shape[0] // shard_size))),
-                               chunksize=1)
-
-            batch_count = 0
-            last_time = time()
-            try:
-                for write_signal in out:
-                    batch_count += write_signal
-                    if batch_count % cpu_count == 0:
-                        curr_time = time()
-                        logging.info("Processed batch: {:5} | Total: {:8}/{:8} | Time/Batch: {:8.2f} | Time/Image: {:8.8f}"
-                                    .format(batch_count,
-                                            min(batch_count * shard_size, all_sketches.shape[0]),
-                                            all_sketches.shape[0],
-                                            (curr_time - last_time) / cpu_count,
-                                            (curr_time - last_time) / (cpu_count * shard_size)))
-                        last_time = curr_time
-            except StopIteration:
-                logging.info("Processing Done")
+        return files[1], files[0]

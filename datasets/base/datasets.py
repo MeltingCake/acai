@@ -14,7 +14,7 @@ def register_dataset(dataset_name):
     return decorator
 
 
-def get_dataset(dataset):
+def get_dataset_sketch(dataset):
     """
     Returns dataset class if registered.
     :param dataset:

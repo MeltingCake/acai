@@ -161,21 +161,21 @@ class AE(CustomModel):
                 while not sess.should_stop():
                     self.train_step(data_in, ops)
                     self.cur_nimg = batch_size * self.tf_sess.run(global_step)
-                    if self.cur_nimg % (report_kimg << 10) == 0:
-                        accuracy = self.eval_latent_accuracy(ops)
-                        run_op(latent_accuracy_op, accuracy)
-                        if FLAGS.dataset in ('lines32', 'linesym32'):
-                            mean_ds = self.eval_custom_lines32(ops)
-                            run_op(mean_distance_op, mean_ds[0])
-                            run_op(mean_smoothness_op, mean_ds[1])
-                        elif FLAGS.dataset == 'lines32_vertical':
-                            mean_ds = self.eval_custom_lines32_vertical(ops)
-                            run_op(mean_distance_op, mean_ds[0])
-                            run_op(mean_smoothness_op, mean_ds[1])
-                        elif FLAGS.dataset == 'lines32':
-                            mean_ds = self.eval_custom_lines32(ops)
-                            run_op(mean_distance_op, mean_ds[0])
-                            run_op(mean_smoothness_op, mean_ds[1])
+                    # if self.cur_nimg % (report_kimg << 10) == 0:
+                    #     accuracy = self.eval_latent_accuracy(ops)
+                    #     run_op(latent_accuracy_op, accuracy)
+                    #     if FLAGS.dataset in ('lines32', 'linesym32'):
+                    #         mean_ds = self.eval_custom_lines32(ops)
+                    #         run_op(mean_distance_op, mean_ds[0])
+                    #         run_op(mean_smoothness_op, mean_ds[1])
+                    #     elif FLAGS.dataset == 'lines32_vertical':
+                    #         mean_ds = self.eval_custom_lines32_vertical(ops)
+                    #         run_op(mean_distance_op, mean_ds[0])
+                    #         run_op(mean_smoothness_op, mean_ds[1])
+                    #     elif FLAGS.dataset == 'lines32':
+                    #         mean_ds = self.eval_custom_lines32(ops)
+                    #         run_op(mean_distance_op, mean_ds[0])
+                    #         run_op(mean_smoothness_op, mean_ds[1])
 
     def make_sample_grid_and_save(self,
                                   ops,

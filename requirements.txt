@@ -13,3 +13,4 @@ tmuxp
 requests
 googledrivedownloader
 tqdm
+psutil

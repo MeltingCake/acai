@@ -30,6 +30,9 @@ import random
 import numpy as np
 import tensorflow as tf
 
+from configs import get_config
+from datasets import get_dataset_sketch
+
 _DATA_CACHE = None
 
 DATA_DIR = os.environ['AE_DATA']
@@ -50,23 +53,37 @@ class DataSet(object):
 
 
 def get_dataset(dataset_name, params):
-    train, height, width, colors = _DATASETS[dataset_name + '_train'](
-        batch_size=params['batch_size'])
-    test = _DATASETS[dataset_name + '_test'](batch_size=1)[0]
-    train = train.map(lambda v: dict(x=v['x'],
-                                     label=tf.one_hot(v['label'],
-                                                      _NCLASS[dataset_name])))
-    test = test.map(lambda v: dict(x=v['x'],
-                                   label=tf.one_hot(v['label'],
-                                                    _NCLASS[dataset_name])))
-    if dataset_name + '_train_once' in _DATASETS:
-        train_once = _DATASETS[dataset_name + '_train_once'](batch_size=1)[0]
-        train_once = train_once.map(lambda v: dict(
-            x=v['x'], label=tf.one_hot(v['label'], _NCLASS[dataset_name])))
+    if dataset_name == "quickdraw":
+        ds_config = get_config(dataset_name)().parse("batch_size={},split={}".format(params['batch_size'], params['split']))
+        dataset_proto = get_dataset_sketch(dataset_name)(params['data_dir'], ds_config)
+
+        dataset = dataset_proto.load(repeat=True)
+        return DataSet(dataset_name, dataset, None, None, 48, 48, 3, 300)
+    elif dataset_name == "fs_omniglot":
+        ds_config = get_config(dataset_name)().parse("batch_size={},split={}".format(params['batch_size'], params['split']))
+        dataset_proto = get_dataset_sketch(dataset_name)(params['data_dir'], ds_config)
+
+        dataset = dataset_proto.load(repeat=True)
+        raise Exception("FS_Omniglot, decide on num_classes")
+        # return DataSet(dataset_name, dataset, None, None, 48, 48, 3, 32)
     else:
-        train_once = None
-    return DataSet(dataset_name, train, test, train_once, height, width,
-                   colors, _NCLASS[dataset_name])
+        train, height, width, colors = _DATASETS[dataset_name + '_train'](
+            batch_size=params['batch_size'])
+        test = _DATASETS[dataset_name + '_test'](batch_size=1)[0]
+        train = train.map(lambda v: dict(x=v['x'],
+                                         label=tf.one_hot(v['label'],
+                                                          _NCLASS[dataset_name])))
+        test = test.map(lambda v: dict(x=v['x'],
+                                       label=tf.one_hot(v['label'],
+                                                        _NCLASS[dataset_name])))
+        if dataset_name + '_train_once' in _DATASETS:
+            train_once = _DATASETS[dataset_name + '_train_once'](batch_size=1)[0]
+            train_once = train_once.map(lambda v: dict(
+                x=v['x'], label=tf.one_hot(v['label'], _NCLASS[dataset_name])))
+        else:
+            train_once = None
+        return DataSet(dataset_name, train, test, train_once, height, width,
+                       colors, _NCLASS[dataset_name])
 
 
 def draw_line(angle, height, width, w=2.):
