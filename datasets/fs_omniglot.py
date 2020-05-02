@@ -97,7 +97,7 @@ class FSOmniglotDataset(DatasetBase):
                     accumulate = {"image": [], "strokes": [], "rasterized_strokes": [], "character": [], "alphabet": [], "class": []}
 
                     for image_file, stroke_file in zip(image_files, stroke_files):
-                        image: Image.Image = Image.open(os.path.join(image_dir, alphabet, character, image_file)).convert("RGB")
+                        image = Image.open(os.path.join(image_dir, alphabet, character, image_file)).convert("RGB")
                         strokes_str = open(os.path.join(stroke_dir, alphabet, character, stroke_file)).read()
 
                         strokes = string_to_strokes(strokes_str)
