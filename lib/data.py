@@ -35,7 +35,7 @@ from datasets import get_dataset_sketch
 
 _DATA_CACHE = None
 
-DATA_DIR = os.environ['AE_DATA']
+DATA_DIR = '/h/wangale/data/acai_data'
 
 
 class DataSet(object):

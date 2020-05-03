@@ -8,8 +8,9 @@ absl-py
 scipy
 scikit-learn
 bleach==1.5.0
+tensorflow-gpu==1.8.0
+psutil
 tmuxp
 requests
 googledrivedownloader
 tqdm
-psutil

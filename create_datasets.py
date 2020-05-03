@@ -53,7 +53,7 @@ def _load_svhn():
     splits = collections.OrderedDict()
     for split in ['train', 'test', 'extra']:
         with tempfile.NamedTemporaryFile() as f:
-            urllib.urlretrieve(URLS['svhn'].format(split), f.name)
+            urllib.request.urlretrieve(URLS['svhn'].format(split), f.name)
             data_dict = scipy.io.loadmat(f.name)
         dataset = {}
         dataset['images'] = np.transpose(data_dict['X'], [3, 0, 1, 2])
@@ -71,7 +71,7 @@ def _load_cifar10():
                             [0, 2, 3, 1])
 
     with tempfile.NamedTemporaryFile() as f:
-        urllib.urlretrieve(URLS['cifar10'], f.name)
+        urllib.request.urlretrieve(URLS['cifar10'], f.name)
         tar = tarfile.open(fileobj=f)
         train_data_batches, train_data_labels = [], []
         for batch in range(1, 6):
@@ -116,7 +116,7 @@ def _load_mnist():
     splits = collections.OrderedDict()
     for split, split_file in split_files.items():
         with tempfile.NamedTemporaryFile() as f:
-            urllib.urlretrieve(
+            urllib.request.urlretrieve(
                 URLS['mnist'].format(image_filename.format(split_file)),
                 f.name)
             with gzip.GzipFile(fileobj=f, mode='r') as data:
@@ -128,7 +128,7 @@ def _load_mnist():
                     data.read(n_images * row * col), dtype=np.uint8)
                 images = images.reshape((n_images, row, col, 1))
         with tempfile.NamedTemporaryFile() as f:
-            urllib.urlretrieve(
+            urllib.request.urlretrieve(
                 URLS['mnist'].format(label_filename.format(split_file)),
                 f.name)
             with gzip.GzipFile(fileobj=f, mode='r') as data:

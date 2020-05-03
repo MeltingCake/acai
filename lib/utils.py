@@ -20,7 +20,7 @@ import re
 import time
 import numpy as np
 import tensorflow as tf
-import data
+import lib.data as data
 
 
 class HookReport(tf.train.SessionRunHook):
@@ -212,7 +212,7 @@ def load_ae(path, target_dataset, batch, all_aes, return_dataset=False):
         if ',' in value:
             pass
         elif value in ('True', 'False'):
-            value = dict(True=True, False=False)[value]
+            value = {"True": True, "False": False}[value]
         elif '.' in value:
             value = float(value)
         else:
