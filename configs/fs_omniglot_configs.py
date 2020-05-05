@@ -13,7 +13,6 @@ def fs_omniglot_default():
         batch_size=256,
 
         # ----- Episodic Parameters ----- #
-        episodic=False,
         way=0,
         shot=0,
 

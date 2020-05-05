@@ -12,7 +12,7 @@ def sketch_process(batch_data, padding, max_seq_len, epsilon, png_dims, save_pat
     accumulate = {"natural_image": [], "sketch_path": [], "strokes": [], "rasterized_strokes": [], "imagenet_id": [], "sketch_id": []}
     for natural_image, sketch_path, svg, sketch_id, bbx, width_height in batch_data:
         imagenet_id = sketch_id.split("-")[0]
-        image: Image = natural_image
+        image = natural_image
         crop_box = [bbx[0], bbx[1], bbx[0] + bbx[2], bbx[1] + bbx[3]]
         crop = image.resize(width_height).crop(crop_box)
         crop.save(os.path.join(sample_path + "_test.png"))

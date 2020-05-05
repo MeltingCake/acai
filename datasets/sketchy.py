@@ -1,19 +1,6 @@
 import os
-from concurrent.futures.process import ProcessPoolExecutor
-from time import time
-from itertools import repeat
-from math import ceil
-
-import numpy as np
-import psutil
-import csv
-from PIL import Image
-
-from absl import logging
-from svgpathtools import svg2paths
 
 from datasets.base import register_dataset, DatasetBase
-from util import sketch_process
 
 
 @register_dataset("sketchy")

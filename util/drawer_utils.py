@@ -1,7 +1,5 @@
 import tensorflow as tf
-import tensorflow_probability as tfp
 import numpy as np
-from PIL import Image
 
 from .utils import gaussian_blur
 from .quickdraw_utils import scale_and_rasterize, stroke_three_format
@@ -53,7 +51,6 @@ def params_to_strokes(pi, mu1, mu2, sigma1, sigma2, rho, pen, batch_size):
     eps = tf.random.normal(mu.shape)
     lower_triangular_decomp = tf.reshape(step_lower_triangular_decomp, (-1, 2, 2))
     relative_xy = tf.reshape(mu + tf.einsum("ijk,ik->ij", lower_triangular_decomp, eps), (batch_size, -1, 2))
-    # relative_xy = tfp.distributions.MultivariateNormalTriL(mu, lower_triangular_decomp).sample(1)
 
     # Re-add intial point
     relative_xy = tf.concat((tf.zeros((relative_xy.shape[0], 1, relative_xy.shape[-1])), relative_xy), axis=1)

@@ -36,6 +36,7 @@ from datasets import get_dataset_sketch
 _DATA_CACHE = None
 
 DATA_DIR = '/h/wangale/data/acai_data'
+SKETCH_DATA_DIR = '/h/wangale/data'
 
 
 class DataSet(object):
@@ -54,18 +55,31 @@ class DataSet(object):
 
 def get_dataset(dataset_name, params):
     if dataset_name == "quickdraw":
-        ds_config = get_config(dataset_name)().parse("batch_size={},split={}".format(params['batch_size'], params['split']))
-        dataset_proto = get_dataset_sketch(dataset_name)(params['data_dir'], ds_config)
+        ds_config = get_config(dataset_name)().parse("split={}".format("c300_msl65_scaled_48"))
+        dataset_proto = get_dataset_sketch(dataset_name)(SKETCH_DATA_DIR, ds_config)
 
-        dataset = dataset_proto.load(repeat=True)
-        return DataSet(dataset_name, dataset, None, None, 48, 48, 3, 300)
+        dataset = dataset_proto.load(repeat=True)[0]
+
+        dataset = dataset.map(lambda im, lab: tf.py_func(lambda x, y: (x[0], quickdraw_lookup[y[0].decode('utf-8').rstrip('\x00')]), (im, lab), (tf.float32, tf.int64)))
+        dataset = dataset.map(lambda im, lab: (im, tf.one_hot(lab, len(quickdraw_classes))))
+        train, height, width, colors = input_fn_dataset(dataset, params['batch_size'])
+        return DataSet(dataset_name, train, None, None, height, width,
+                       colors, len(quickdraw_classes))
     elif dataset_name == "fs_omniglot":
-        ds_config = get_config(dataset_name)().parse("batch_size={},split={}".format(params['batch_size'], params['split']))
-        dataset_proto = get_dataset_sketch(dataset_name)(params['data_dir'], ds_config)
+        ds_config = get_config(params['fso_config'])().parse("mode=batch")
+        dataset_proto = get_dataset_sketch(dataset_name)(SKETCH_DATA_DIR, ds_config)
 
-        dataset = dataset_proto.load(repeat=True)
-        raise Exception("FS_Omniglot, decide on num_classes")
-        # return DataSet(dataset_name, dataset, None, None, 48, 48, 3, 32)
+        (dataset, _), class_list = dataset_proto.load(repeat=True)
+        fso_lookup = {class_string: i for i, class_string in enumerate(class_list)}
+
+        dataset = dataset.map(
+            lambda im, lab: tf.py_func(lambda x, y: (x[0], fso_lookup[y[0].decode('utf-8').rstrip('\x00')]), (im, lab),
+                                       (tf.float32, tf.int64)))
+        dataset = dataset.map(lambda im, lab: (im, tf.one_hot(lab, len(class_list))))
+
+        train, height, width, colors = input_fn_dataset(dataset, params['batch_size'])
+        return DataSet(dataset_name, train, None, None, height, width,
+                       colors, len(class_list))
     else:
         train, height, width, colors = _DATASETS[dataset_name + '_train'](
             batch_size=params['batch_size'])
@@ -244,6 +258,64 @@ def input_fn_record(record_parse_fn,
     return dataset, resize[0] or size[0], resize[1] or size[1], size[2]
 
 
+def input_fn_dataset(dataset,
+                     batch_size,
+                     size=(48, 48, 3),
+                     pad=(0, 0),
+                     crop=(0, 0),
+                     resize=(48, 48),
+                     shuffle=1024,
+                     repeat=True,
+                     random_flip_x=False,
+                     random_shift_x=0,
+                     random_shift_y=0,
+                     limit=None):
+
+    def random_shift(v):
+        if random_shift_y:
+            v = tf.concat([v[-random_shift_y:], v, v[:random_shift_y]], 0)
+        if random_shift_x:
+            v = tf.concat([v[:, -random_shift_x:], v, v[:, :random_shift_x]],
+                          1)
+        return tf.random_crop(v, [resize[0], resize[1], size[2]])
+
+    if limit is not None:
+        if limit > 0:
+            dataset = dataset.take(limit)
+        elif limit < 0:
+            dataset = dataset.skip(-limit)
+    if repeat:
+        dataset = dataset.repeat()
+    delta = [0, 0]
+    if sum(crop):
+        dataset = dataset.map(
+            lambda x, y: (x[crop[0]:-crop[0], crop[1]:-crop[1]], y))
+        delta[0] -= 2 * crop[0]
+        delta[1] -= 2 * crop[1]
+    if sum(pad):
+        padding = [[pad[0]] * 2, [pad[1]] * 2, [0] * 2]
+        dataset = dataset.map(
+            lambda x, y: (tf.pad(x, padding, constant_values=-1.), y))
+        delta[0] += 2 * crop[0]
+        delta[1] += 2 * crop[1]
+    if resize[0] - delta[0] != size[0] or resize[1] - delta[1] != size[1]:
+        dataset = dataset.map(
+            lambda x, y: (tf.image.resize_bicubic([x], list(resize))[0], y), 4)
+    if shuffle:
+        dataset = dataset.shuffle(shuffle)
+    if random_flip_x:
+        dataset = dataset.map(
+            lambda x, y: (tf.image.random_flip_left_right(x), y), 4)
+    if random_shift_x or random_shift_y:
+        dataset = dataset.map(lambda x, y: (random_shift(x), y), 4)
+    dataset = dataset.batch(batch_size)
+    dataset = dataset.map(
+        lambda x, y: dict(
+            x=tf.reshape(x, [batch_size] + list(resize) + list(size[-1:])),
+            label=y))
+    dataset = dataset.prefetch(4)  # Prefetch a few batches.
+    return dataset, resize[0] or size[0], resize[1] or size[1], size[2]
+
 _NCLASS = {
     'celeba32': 1,
     'cifar10': 10,
@@ -352,3 +424,6 @@ _DATASETS = {
     'lines32_test': functools.partial(input_lines, limit=5000,
                                          size=(32, 32, 1)),
 }
+
+quickdraw_classes = "The Eiffel Tower,The Mona Lisa,aircraft carrier,alarm clock,ambulance,angel,animal migration,ant,apple,arm,asparagus,banana,barn,baseball,baseball bat,bathtub,beach,bear,bed,bee,belt,bench,bicycle,binoculars,bird,blueberry,book,boomerang,bottlecap,bread,bridge,broccoli,broom,bucket,bulldozer,bus,bush,butterfly,cactus,cake,calculator,calendar,camel,camera,camouflage,campfire,candle,cannon,car,carrot,castle,cat,ceiling fan,cell phone,cello,chair,chandelier,church,circle,clarinet,clock,coffee cup,computer,cookie,couch,cow,crayon,crocodile,crown,cruise ship,diamond,dishwasher,diving board,dog,dolphin,donut,door,dragon,dresser,drill,drums,duck,dumbbell,ear,eye,eyeglasses,face,fan,feather,fence,finger,fire hydrant,fireplace,firetruck,fish,flamingo,flashlight,flip flops,flower,foot,fork,frog,frying pan,garden,garden hose,giraffe,goatee,grapes,grass,guitar,hamburger,hand,harp,hat,headphones,hedgehog,helicopter,helmet,hockey puck,hockey stick,horse,hospital,hot air balloon,hot dog,hourglass,house,house plant,ice cream,key,keyboard,knee,knife,ladder,lantern,leaf,leg,light bulb,lighter,lighthouse,lightning,line,lipstick,lobster,mailbox,map,marker,matches,megaphone,mermaid,microphone,microwave,monkey,mosquito,motorbike,mountain,mouse,moustache,mouth,mushroom,nail,necklace,nose,octopus,onion,oven,owl,paint can,paintbrush,palm tree,parachute,passport,peanut,pear,pencil,penguin,piano,pickup truck,pig,pineapple,pliers,police car,pool,popsicle,postcard,purse,rabbit,raccoon,radio,rain,rainbow,rake,remote control,rhinoceros,river,rollerskates,sailboat,sandwich,saxophone,scissors,see saw,shark,sheep,shoe,shorts,shovel,sink,skull,sleeping bag,smiley face,snail,snake,snowflake,soccer ball,speedboat,square,star,steak,stereo,stitches,stop sign,strawberry,streetlight,string bean,submarine,sun,swing set,syringe,t-shirt,table,teapot,teddy-bear,tennis racquet,tent,tiger,toe,tooth,toothpaste,tractor,traffic light,train,triangle,trombone,truck,trumpet,umbrella,underwear,van,vase,watermelon,wheel,windmill,wine bottle,wine glass,wristwatch,zigzag,blackberry,power outlet,peas,hot tub,toothbrush,skateboard,cloud,elbow,bat,pond,compass,elephant,hurricane,jail,school bus,skyscraper,tornado,picture frame,lollipop,spoon,saw,cup,roller coaster,pants,jacket,rifle,yoga,toilet,waterslide,axe,snowman,bracelet,basket,anvil,octagon,washing machine,tree,television,bowtie,sweater,backpack,zebra,suitcase,stairs,The Great Wall of China".split(',')
+quickdraw_lookup = {class_string: i for i, class_string in enumerate(quickdraw_classes)}

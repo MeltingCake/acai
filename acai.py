@@ -100,17 +100,18 @@ class ACAI(train.AE):
         n_interpolations = 16
         n_images_per_interpolation = 16
 
-        def gen_images():
-            return self.make_sample_grid_and_save(
-                ops, interpolation=n_interpolations,
-                height=n_images_per_interpolation)
+        if self.test_data:
+            def gen_images():
+                return self.make_sample_grid_and_save(
+                    ops, interpolation=n_interpolations,
+                    height=n_images_per_interpolation)
 
-        recon, inter, slerp, samples = tf.py_func(
-            gen_images, [], [tf.float32] * 4)
-        tf.summary.image('reconstruction', tf.expand_dims(recon, 0))
-        tf.summary.image('interpolation', tf.expand_dims(inter, 0))
-        tf.summary.image('slerp', tf.expand_dims(slerp, 0))
-        tf.summary.image('samples', tf.expand_dims(samples, 0))
+            recon, inter, slerp, samples = tf.py_func(
+                gen_images, [], [tf.float32] * 4)
+            tf.summary.image('reconstruction', tf.expand_dims(recon, 0))
+            tf.summary.image('interpolation', tf.expand_dims(inter, 0))
+            tf.summary.image('slerp', tf.expand_dims(slerp, 0))
+            tf.summary.image('samples', tf.expand_dims(samples, 0))
 
         if FLAGS.dataset == 'lines32':
             batched = (n_interpolations, 32, n_images_per_interpolation, 32, 1)
@@ -127,7 +128,7 @@ class ACAI(train.AE):
 def main(argv):
     del argv  # Unused.
     batch = FLAGS.batch
-    dataset = data.get_dataset(FLAGS.dataset, dict(batch_size=batch))
+    dataset = data.get_dataset(FLAGS.dataset, dict(batch_size=batch, fso_config=FLAGS.fso_config))
     scales = int(round(math.log(dataset.width // FLAGS.latent_width, 2)))
     model = ACAI(
         dataset,
@@ -144,11 +145,13 @@ def main(argv):
 if __name__ == '__main__':
     flags.DEFINE_integer('depth', 64, 'Depth of first for convolution.')
     flags.DEFINE_integer(
-        'latent', 16,
+        'latent', 64,
         'Latent space depth, the total latent size is the depth multiplied by '
         'latent_width ** 2.')
     flags.DEFINE_integer('latent_width', 4, 'Width of the latent space.')
     flags.DEFINE_float('advweight', 0.5, 'Adversarial weight.')
     flags.DEFINE_integer('advdepth', 0, 'Depth for adversary network.')
     flags.DEFINE_float('reg', 0.2, 'Amount of discriminator regularization.')
+
+    flags.DEFINE_string("fso_config", None, "FS_Omniglot config name if using FSO")
     app.run(main)

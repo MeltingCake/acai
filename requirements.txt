@@ -14,3 +14,4 @@ tmuxp
 requests
 googledrivedownloader
 tqdm
+pip

@@ -33,15 +33,17 @@ class FSOmniglotDataset(DatasetBase):
         if self._mode == "batch":
             # If not episdic, i.e. conventional loading
             files = []
+            class_list = []
             for alphabet in self._split.split(","):
                 path = os.path.join(data_path, alphabet)
                 if os.path.isdir(path):
                     file_list = os.listdir(os.path.join(data_path, alphabet))
                     files.extend([os.path.join(data_path, alphabet, c) for c in file_list])
+                    class_list.extend([alphabet + str(c).split(".")[0][-2:] for c in file_list])
                 else:
                     files.append(path)
-
-            return self._create_dataset_from_filepaths(files, repeat)
+                    class_list.append(alphabet + str(path).split(".")[0][-2:])
+            return self._create_dataset_from_filepaths(files, repeat), class_list
         else:
             logging.fatal("Dataset mode not \"episodic\" or \"batch\", value supplied: %s", self._mode)
 

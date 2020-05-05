@@ -127,8 +127,8 @@ class AE(CustomModel):
                             self.eval_sess.run(global_step))
 
     def train(self, report_kimg=1 << 6):
-        batch_size = FLAGS.batch
         with tf.Graph().as_default():
+            batch_size = FLAGS.batch
             data_in = self.train_data.make_one_shot_iterator().get_next()
             global_step = tf.train.get_or_create_global_step()
             self.latent_accuracy = self.add_summary_var('latent_accuracy')
